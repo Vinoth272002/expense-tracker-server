@@ -4,7 +4,7 @@ import AppError from "../utils/AppError.js";
 export const addIncome = async (req, res, next) => {
     try {
         const userId = req.user.id;
-        const { icon, source, amount, date } = req.body;
+        const { icon, source, amount, date, notes } = req.body;
 
         const errors = [];
         if (!source || !source.trim()) errors.push("Source is required");
@@ -42,7 +42,8 @@ export const addIncome = async (req, res, next) => {
             icon,
             source: source.trim(),
             amount: Number(amount),
-            date
+            date,
+            notes: notes.trim()
         });
 
         return res.status(201).json(income);
@@ -76,4 +77,10 @@ export const getAllIncome = async (req, res, next) => {
 
 export const downloadIncomeExcelFormat = (req, res, next) => {};
 
-export const deleteIncome = (req, res, next) => {};
+export const deleteIncome = (req, res, next) => {
+    try {
+        const { incomeId } = req.params;
+    } catch (error) {
+        
+    }
+};
