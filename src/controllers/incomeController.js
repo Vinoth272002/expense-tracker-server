@@ -1,4 +1,4 @@
-import { createIncome, getAllIncomes } from "../models/Income.js";
+import { createIncome, deleteIncomeById, getAllIncomes } from "../models/Income.js";
 import AppError from "../utils/AppError.js";
 import { successResponse } from "../utils/response.js";
 
@@ -70,13 +70,12 @@ export const getAllIncome = async (req, res, next) => {
             )
         };
 
-        const allIncomes = await getAllIncomes({
+        await getAllIncomes({
             userId
         });
 
         const responseData = successResponse({
             message: "Incomes retrieved successfully",
-            data: allIncomes,
             statusCode: 200
         });
 
@@ -90,20 +89,22 @@ export const downloadIncomeExcelFormat = (req, res, next) => {};
 
 export const deleteIncome = async (req, res, next) => {
     try {
-        const { incomeId } = Number(req.params);
+        const userId = req.user?.id;
+        const { incomeId } = req.params;
 
         if (!incomeId || isNaN(incomeId)) {
             throw new AppError(
-                "incomeId must be a valid number",
+                "IncomeId must be a valid number",
                 400,
-                ["incomeId is required and must be a valid number"]
+                ["IncomeId is required and must be a valid number"]
             )
         }
 
-        await deleteIncome(incomeId);
+        const responseDta = await deleteIncomeById({ incomeId, userId });
 
         const responseData = successResponse({
             message: "Income deleted successfully",
+            data: responseDta,
             statusCode: 200
         });
 
