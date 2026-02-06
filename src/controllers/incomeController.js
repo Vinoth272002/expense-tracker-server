@@ -7,21 +7,41 @@ export const addIncome = async (req, res, next) => {
         const { icon, source, amount, date } = req.body;
 
         const errors = [];
-        if (!source) errors.push("Source can not be empty");
-        if (!amount) errors.push("Amount can not be empty");
+        if (!source || !source.trim()) errors.push("Source is required");
+
+        if (amount === undefined || amount === null) {
+            errors.push("Amount is required");
+        } else if (isNaN(amount)) {
+            errors.push("Amount must be a number");
+        } else if (Number(amount) <= 0) {
+            errors.push("Amount must be greater than 0")
+        }
         
-        if (amount <= 0) {
+        if (date) {
+            const parseDate = new Date(date);
+
+            if (isNaN(parseDate.getTime())) {
+                errors.push("Invalid date format");
+            } else if (parseDate > new Date()) {
+                errors.push("Date cannot be in the future")
+            }
+        } else {
+            date = new Date();
+        }
+
+        if (errors.length) {
             throw new AppError(
-                'Amount must be greater than 0',
-                400
+                "Validation error",
+                400,
+                errors
             )
         }
 
         const income = await createIncome({
             userId,
             icon,
-            source,
-            amount,
+            source: source.trim(),
+            amount: Number(amount),
             date
         });
 
@@ -33,7 +53,6 @@ export const addIncome = async (req, res, next) => {
 
 export const getAllIncome = async (req, res, next) => {
     try {
-        console.log(req.user);
         const userId = req.user?.id;
         
         if(!userId) {
@@ -47,7 +66,7 @@ export const getAllIncome = async (req, res, next) => {
             userId
         });
 
-        return res.status(201).json(allIncomes);
+        return res.status(200).json(allIncomes);
     } catch (error) {
         console.log(error);
         

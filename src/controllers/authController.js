@@ -3,6 +3,7 @@ import { comparePassword, hashPassword } from '../config/password.js';
 import { createUser, findUserByEmail, findUserById } from '../models/User.js';
 import { successResponse }  from '../utils/response.js';
 import AppError from '../utils/AppError.js';
+import isEmail from 'validator/lib/isEmail.js';
 
 // Generate JWT token
 const generateToken = (id) => {
@@ -15,9 +16,23 @@ export const registerUser = async (req, res, next) => {
         const { fullName, email, password, profilePicUrl } = req.body;
         
         const errors = [];
-        if (!fullName) errors.push("Full name is required");
-        if (!email) errors.push("Email is required");
-        if (!password) errors.push("Password is required");
+
+        if (!fullName || !fullName.trim()) errors.push("Full name is required");
+
+        if (!email || !email.trim()) {
+            errors.push("Email is required");
+        } else {
+            email = email.toLowerCase().trim();
+            if (!isEmail(email)) {
+                errors.push("Invalid email format")
+            }
+        }
+
+        if (!password) {
+            errors.push("Password is required");
+        } else if (password.length < 8) {
+            errors.push("Password must be at least 8 characters long");
+        }
 
         if (errors.length > 0) {
             throw new AppError(
@@ -29,7 +44,7 @@ export const registerUser = async (req, res, next) => {
 
         const hashedPassword = await hashPassword(password);
         const user = await createUser({
-            fullName,
+            fullName: fullName.trim(),
             email,
             password: hashedPassword,
             profilePicUrl
@@ -57,11 +72,11 @@ export const registerUser = async (req, res, next) => {
 };
 
 // Login User
-export const loginUser = async (req, res) => {
+export const loginUser = async (req, res, next) => {
     try {
         const { email, password } = req.body;
         const errors = [];
-        if (!email) errors.push("Email is required");
+        if (!email || !email.trim()) errors.push("Email is required");
         if (!password) errors.push("Password is required");
 
         if (errors.length > 0) {
