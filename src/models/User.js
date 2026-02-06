@@ -22,6 +22,7 @@ export const findUserByEmail = async (email) => {
         id AS "userId",
         full_name AS "fullName",
         email,
+        password,
         profile_pic_url AS "profilePicURL",
         created_at AS "createdAt"
         FROM users WHERE email = $1`, [email]
