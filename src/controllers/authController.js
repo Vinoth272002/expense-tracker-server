@@ -108,17 +108,17 @@ export const loginUser = async (req, res, next) => {
             message: "User login successfully",
             data: user,
             token: generateToken(user.id),
-            statusCode: 201
+            statusCode: 200
         });
 
-        return res.status(201).json(responseData);
+        return res.status(200).json(responseData);
     } catch (error) {
         next(error);
     }
 };
 
-// Get User Informations
-export const getUserInfo = async (req, res, next) => {
+// Get LoggedIn User Informations
+export const getLoggedInUser = async (req, res, next) => {
     try {
         const userId = req.user.id;
         const user = await findUserById(userId);
