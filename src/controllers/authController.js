@@ -53,7 +53,7 @@ export const registerUser = async (req, res, next) => {
         const responseData = successResponse({
             message: "User registered successfully",
             data: user,
-            token: generateToken(user.id),
+            token: generateToken(user.userId),
             statusCode: 201
         });
 
@@ -86,7 +86,7 @@ export const loginUser = async (req, res, next) => {
                 errors
             )
         }
-
+       
         const user = await findUserByEmail(email);
 
         if (!user) {
@@ -102,10 +102,12 @@ export const loginUser = async (req, res, next) => {
             )
         }
 
+        delete user.password;
+
         const responseData = successResponse({
             message: "User login successfully",
             data: user,
-            token: generateToken(user.id),
+            token: generateToken(user.userId),
             statusCode: 200
         });
 
