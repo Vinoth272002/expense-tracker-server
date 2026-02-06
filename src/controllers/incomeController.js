@@ -1,9 +1,10 @@
 import { createIncome, getAllIncomes } from "../models/Income.js";
 import AppError from "../utils/AppError.js";
+import { successResponse } from "../utils/response.js";
 
 export const addIncome = async (req, res, next) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user?.id;
         const { icon, source, amount, date, notes } = req.body;
 
         const errors = [];
@@ -46,7 +47,13 @@ export const addIncome = async (req, res, next) => {
             notes: notes.trim()
         });
 
-        return res.status(201).json(income);
+        const responseData = successResponse({
+            message: "Income added successfully",
+            data: income,
+            statusCode:201
+        });
+
+        return res.status(201).json(responseData);
     } catch(error) {
         next(error);
     }
@@ -67,20 +74,41 @@ export const getAllIncome = async (req, res, next) => {
             userId
         });
 
-        return res.status(200).json(allIncomes);
+        const responseData = successResponse({
+            message: "Incomes retrieved successfully",
+            data: allIncomes,
+            statusCode: 200
+        });
+
+        return res.status(200).json(responseData);
     } catch (error) {
-        console.log(error);
-        
         next(error);
     }
 };
 
 export const downloadIncomeExcelFormat = (req, res, next) => {};
 
-export const deleteIncome = (req, res, next) => {
+export const deleteIncome = async (req, res, next) => {
     try {
-        const { incomeId } = req.params;
+        const { incomeId } = Number(req.params);
+
+        if (!incomeId || isNaN(incomeId)) {
+            throw new AppError(
+                "incomeId must be a valid number",
+                400,
+                ["incomeId is required and must be a valid number"]
+            )
+        }
+
+        await deleteIncome(incomeId);
+
+        const responseData = successResponse({
+            message: "Income deleted successfully",
+            statusCode: 200
+        });
+
+        res.status(200).json(responseData);
     } catch (error) {
-        
+        next(error);
     }
 };
