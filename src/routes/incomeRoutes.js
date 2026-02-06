@@ -4,9 +4,9 @@ import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/add-income", protect, addIncome);
-router.get("/get-all-incomes", protect, getAllIncome);
-router.get("/download-income-exacel", protect, downloadIncomeExcelFormat);
-router.delete("/delete-income/:id", protect, deleteIncome);
+router.post("/", protect, addIncome);
+router.get("/", protect, getAllIncome);
+router.get("/export/excel", protect, downloadIncomeExcelFormat);
+router.delete("/:id", protect, deleteIncome);
 
 export default router;
