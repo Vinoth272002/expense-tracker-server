@@ -46,3 +46,11 @@ The backend is designed with:
 
 ## Project Structure
 
+src/
+├─ controllers/ # Request handling & business logic
+├─ routes/ # API route definitions
+├─ models/ # Database models
+├─ middleware/ # Auth, validation, error handling
+├─ utils/ # Helpers and utilities
+├─ app.js # Express app setup
+└─ server.js # Server entry point
