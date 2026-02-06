@@ -89,19 +89,17 @@ export const loginUser = async (req, res, next) => {
 
         const user = await findUserByEmail(email);
 
-        if (!comparePassword(password, user.password)) {
+        if (!user) {
+            throw new AppError("User not found", 404, ["User does not exist"]);
+        }
+
+        const isPasswordValid = await comparePassword(password, user.password);
+        if (!isPasswordValid) {
             throw new AppError(
                 "Invalid credentials",
                 400,
                 ["Invalid email or password"]
             )
-        }
-        
-
-        if (!user) {
-            return next(
-                new AppError("User not found", 404, ["User does not exist"])
-            );
         }
 
         const responseData = successResponse({
@@ -120,7 +118,7 @@ export const loginUser = async (req, res, next) => {
 // Get LoggedIn User Informations
 export const getLoggedInUser = async (req, res, next) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user?.id;
         const user = await findUserById(userId);
 
         if (!user) {
