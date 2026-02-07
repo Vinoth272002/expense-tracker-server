@@ -8,6 +8,7 @@ export const addIncome = async (req, res, next) => {
         const userId = req.user?.id;
         const { icon, source, amount, date, notes } = req.body;
 
+        // Validate the request data
         const errors = [];
         if (!source || !source.trim()) errors.push("Source is required");
 
@@ -19,6 +20,7 @@ export const addIncome = async (req, res, next) => {
             errors.push("Amount must be greater than 0")
         }
         
+        // Check the date if provided, otherwise set it to the current date
         if (date) {
             const parseDate = new Date(date);
 
@@ -39,6 +41,7 @@ export const addIncome = async (req, res, next) => {
             )
         }
 
+        // Create the income record in the database
         const income = await createIncome({
             userId,
             icon,
@@ -48,6 +51,7 @@ export const addIncome = async (req, res, next) => {
             notes: notes.trim()
         });
 
+        // Format the response data
         const responseData = successResponse({
             message: "Income added successfully",
             data: income,
@@ -66,11 +70,12 @@ export const getAllIncome = async (req, res, next) => {
         
         if(!userId) {
             throw new AppError(
-                'User ID must be precent',
+                'User ID must be present',
                 500
             )
         };
 
+        // Get all incomes for the user
         const allIncomes = await getAllIncomes({
             userId
         });
@@ -100,6 +105,7 @@ export const deleteIncome = async (req, res, next) => {
             )
         }
 
+        // Delete the income record from the Database
         const responseDta = await deleteIncomeById({ incomeId, userId });
 
         const responseData = successResponse({
@@ -125,6 +131,7 @@ export const downloadIncomeExcelFormat = async (req, res, next) => {
             )
         }
 
+        // Get all incomes for the user to export
         const incomes = await getAllIncomesForExport({ userId });
 
         // Create a new workbook and worksheet 

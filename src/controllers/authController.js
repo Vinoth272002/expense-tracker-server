@@ -42,7 +42,10 @@ export const registerUser = async (req, res, next) => {
             )
         }
 
+        // Hash the password before storing it in the database
         const hashedPassword = await hashPassword(password);
+
+        // Create the user record in the database
         const user = await createUser({
             fullName: fullName.trim(),
             email,
@@ -87,12 +90,14 @@ export const loginUser = async (req, res, next) => {
             )
         }
        
+        // Find the user by email from the database
         const user = await findUserByEmail(email);
 
         if (!user) {
             throw new AppError("User not found", 404, ["User does not exist"]);
         }
 
+        // Compare the provided password with the hashed password stored in the database using bcrypt, if the password is does not match, return an error response
         const isPasswordValid = await comparePassword(password, user.password);
         if (!isPasswordValid) {
             throw new AppError(
@@ -121,6 +126,16 @@ export const loginUser = async (req, res, next) => {
 export const getLoggedInUser = async (req, res, next) => {
     try {
         const userId = req.user?.id;
+        
+        if (!userId) {
+            throw new AppError(
+                'User ID must be present',
+                500,
+                ['User ID is missing in the request']
+            )
+        };
+
+        // Find the user by ID from the database
         const user = await findUserById(userId);
 
         if (!user) {
