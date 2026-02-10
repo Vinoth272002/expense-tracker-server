@@ -1,4 +1,10 @@
-import { createIncome, deleteIncomeById, getAllIncomes, getAllIncomesForExport } from "../models/Income.js";
+import {
+    createIncome,
+    deleteIncomeById,
+    getAllIncomes,
+    getAllIncomesForExport,
+    findIncomeById
+} from "../models/Income.js";
 import AppError from "../utils/AppError.js";
 import { successResponse } from "../utils/response.js";
 import ExcelJS from "exceljs";
@@ -87,6 +93,41 @@ export const getAllIncome = async (req, res, next) => {
         });
 
         return res.status(200).json(responseData);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getIncomeById = async (req, res, next) => {
+    try {
+        const userId = req.user?.id;
+        const { incomeId } =  req.params;
+        
+        if (!incomeId || isNaN(incomeId)) {
+            throw new AppError(
+                "IncomeId must be a valid Number",
+                400,
+                ["IncomeId is required and must be a valid number"]
+            )
+        }
+
+        const income = await findIncomeById({ incomeId, userId});
+
+        if (!income) {
+            throw new AppError(
+                "Income not found",
+                404,
+                ["Income not found"]
+            )
+        }
+
+        const responseData = successResponse({
+            message: "Income retrieved successfully",
+            data: income,
+            statusCode: 200
+        });
+
+        res.status(200).json(responseData);
     } catch (error) {
         next(error);
     }

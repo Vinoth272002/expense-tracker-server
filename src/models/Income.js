@@ -39,6 +39,24 @@ export const getAllIncomes = async ({ userId }) => {
     return result.rows;
 };
 
+export const findIncomeById = async ({ incomeId, userId }) => {
+    const query = `SELECT
+        id AS "incomeId",
+        user_id AS "userId",
+        icon,
+        source,
+        amount,
+        date,
+        notes,
+        created_at AS "createdAt"
+        FROM incomes WHERE id = $1 AND  user_id = $2
+    `;
+
+    const result = await pool.query(query, [incomeId, userId]);
+
+    return result.rows[0];
+};
+
 export const deleteIncomeById = async ({ incomeId, userId }) => {
     const query = `DELETE FROM incomes
         WHERE id = $1
