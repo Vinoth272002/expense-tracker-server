@@ -12,7 +12,7 @@ export const mapOne = (row) => {
         email: row.email,
         ...(row.password !== undefined && { password: row.password }),
         profilePicURL: row.profile_pic_url,
-        createdAt: row.created_at
+        createdAt: new Date(row.created_at).getTime()
     };
 };
 

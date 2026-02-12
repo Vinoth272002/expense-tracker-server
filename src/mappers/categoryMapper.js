@@ -11,7 +11,7 @@ export const mapOne = (row) => {
         userId: row.user_id,
         categoryName: row.category_name,
         icon: row.icon,
-        createdAt: row.created_at
+        createdAt: new Date(row.created_at).getTime()
     };
 };
 

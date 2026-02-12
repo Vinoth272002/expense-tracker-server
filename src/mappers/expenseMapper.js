@@ -13,9 +13,9 @@ export const mapOne = (row) => {
         icon: row.icon,
         source: row.source,
         amount: row.amount,
-        date: row.date,
+        date: new Date(row.date).getTime(),
         notes: row.notes,
-        createdAt: row.created_at
+        createdAt: new Date(row.created_at).getTime()
     };
 };
 
