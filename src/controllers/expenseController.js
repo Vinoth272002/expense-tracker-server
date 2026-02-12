@@ -1,42 +1,39 @@
-import {
-    createIncome,
-    deleteIncomeById,
-    getAllIncomes,
-    getAllIncomesForExport,
-    findIncomeById
-} from "../models/Income.js";
+import { createExpense,
+    getAllExpense,
+    deleteExpenseById,
+    findExpenseById,
+    getAllExpenseForExport
+} from "../models/Expense.js";
 import AppError from "../utils/AppError.js";
 import { successResponse } from "../utils/response.js";
 import ExcelJS from "exceljs";
 
-export const addIncome = async (req, res, next) => {
+export const addExpense = async (req, res, next) => {
     try {
         const userId = req.user?.id;
-        const { icon, source, amount, date, notes } = req.body;
+        const { icon, source, amount, date, notes, categoryId } = req.body;
 
         // Validate the request data
         const errors = [];
-        if (!source || !source.trim()) errors.push("Source is required");
+        
+        if (!categoryId || Number.isNaN(Number(categoryId))) errors.push("Category ID is required");
 
+        const parsedAmount = Number(amount);
         if (amount === undefined || amount === null) {
             errors.push("Amount is required");
-        } else if (isNaN(amount)) {
+        } else if (Number.isNaN(parsedAmount)) {
             errors.push("Amount must be a number");
-        } else if (Number(amount) <= 0) {
+        } else if (parsedAmount <= 0) {
             errors.push("Amount must be greater than 0")
         }
-        
-        // Check the date if provided, otherwise set it to the current date
-        if (date) {
-            const parseDate = new Date(date);
 
-            if (isNaN(parseDate.getTime())) {
-                errors.push("Invalid date format");
-            } else if (parseDate > new Date()) {
-                errors.push("Date cannot be in the future")
-            }
-        } else {
-            date = new Date();
+        // Check the date if provided, otherwise set it to the current date
+        let expenseDate = date ? new Date(date) : new Date();
+
+        if (Number.isNaN(expenseDate.getTime())) {
+            errors.push("Invalid date format");
+        } else if (expenseDate > new Date()) {
+            errors.push("Date cannot be in the future")
         }
 
         if (errors.length) {
@@ -47,30 +44,29 @@ export const addIncome = async (req, res, next) => {
             )
         }
 
-        // Create the income record in the database
-        const income = await createIncome({
+        const expense = await createExpense({
             userId,
             icon,
-            source: source.trim(),
-            amount: Number(amount),
-            date,
-            notes: notes.trim()
+            source: source?.trim() || null,
+            amount: parsedAmount,
+            date: expenseDate,
+            notes: notes?.trim() || null,
+            categoryId: Number(categoryId)
         });
 
-        // Format the response data
         const responseData = successResponse({
-            message: "Income added successfully",
-            data: income,
+            message: "Expense added successfully",
+            data: expense,
             statusCode:201
         });
 
-        return res.status(201).json(responseData);
-    } catch(error) {
+        res.status(201).json(responseData);
+    } catch (error) {
         next(error);
     }
 };
 
-export const getAllIncome = async (req, res, next) => {
+export const getAllExpenses = async (req, res, next) => {
     try {
         const userId = req.user?.id;
         
@@ -81,14 +77,14 @@ export const getAllIncome = async (req, res, next) => {
             )
         };
 
-        // Get all incomes for the user
-        const allIncomes = await getAllIncomes({
+        // Get all Expense for the user
+        const allExpenses = await getAllExpense({
             userId
         });
 
         const responseData = successResponse({
-            message: "Incomes retrieved successfully",
-            data: allIncomes,
+            message: "Expense retrieved successfully",
+            data: allExpenses,
             statusCode: 200
         });
 
@@ -98,32 +94,32 @@ export const getAllIncome = async (req, res, next) => {
     }
 };
 
-export const getIncomeById = async (req, res, next) => {
+export const getExpenseById = async (req, res, next) => {
     try {
         const userId = req.user?.id;
-        const { incomeId } =  req.params;
+        const { expenseId } =  req.params;
         
-        if (!incomeId || Number.isNaN(Number(incomeId))) {
+        if (!expenseId || Number.isNaN(Number(expenseId))) {
             throw new AppError(
-                "IncomeId must be a valid Number",
+                "ExpenseId must be a valid Number",
                 400,
-                ["IncomeId is required and must be a valid number"]
+                ["ExpenseId is required and must be a valid number"]
             )
         }
 
-        const income = await findIncomeById({ incomeId, userId});
+        const expense = await findExpenseById({ expenseId, userId});
 
-        if (!income) {
+        if (!expense) {
             throw new AppError(
-                "Income not found",
+                "Expense not found",
                 404,
-                ["Income not found"]
+                ["Expense not found"]
             )
         }
 
         const responseData = successResponse({
-            message: "Income retrieved successfully",
-            data: income,
+            message: "Expense retrieved successfully",
+            data: expense,
             statusCode: 200
         });
 
@@ -133,24 +129,24 @@ export const getIncomeById = async (req, res, next) => {
     }
 };
 
-export const deleteIncome = async (req, res, next) => {
+export const deleteExpense = async (req, res, next) => {
     try {
         const userId = req.user?.id;
-        const { incomeId } = req.params;
+        const { expenseId } = req.params;
 
-        if (!incomeId || Number.isNaN(Number(incomeId))) {
+        if (!expenseId || Number.isNaN(Number(expenseId))) {
             throw new AppError(
-                "IncomeId must be a valid number",
+                "ExpenseId must be a valid number",
                 400,
-                ["IncomeId is required and must be a valid number"]
+                ["ExpenseId is required and must be a valid number"]
             )
         }
 
-        // Delete the income record from the Database
-        const responseDta = await deleteIncomeById({ incomeId, userId });
+        // Delete the expense record from the Database
+        const responseDta = await deleteExpenseById({ expenseId, userId });
 
         const responseData = successResponse({
-            message: "Income deleted successfully",
+            message: "Expense deleted successfully",
             data: responseDta,
             statusCode: 200
         });
@@ -161,7 +157,7 @@ export const deleteIncome = async (req, res, next) => {
     }
 };
 
-export const downloadIncomeExcelFormat = async (req, res, next) => {
+export const downloadExpenseExcelFormat = async (req, res, next) => {
     try {
         const userId = req.user?.id;
 
@@ -172,17 +168,18 @@ export const downloadIncomeExcelFormat = async (req, res, next) => {
             )
         }
 
-        // Get all incomes for the user to export
-        const incomes = await getAllIncomesForExport({ userId });
+        // Get all expenses for the user to export
+        const expenses = await getAllExpenseForExport({ userId });
 
         // Create a new workbook and worksheet 
         const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet("Incomes");
+        const worksheet = workbook.addWorksheet("Expenses");
 
         // Define columns for the worksheet
         worksheet.columns = [
             { header: "Source", key: "source", width: 30 },
             { header: "Amount", key: "amount", width: 15 },
+            { header: "Category", key: "category", width: 20 },
             { header: "Date", key: "date", width: 20 },
             { header: "Notes", key: "notes", width: 30 },
             { header: "Created At", key: "createdAt", width: 30 }
@@ -191,14 +188,15 @@ export const downloadIncomeExcelFormat = async (req, res, next) => {
         // Style the header row
         worksheet.getRow(1).font = { bold: true };
 
-        // Add income data to the worksheet
-        incomes.forEach((income) => {
+        // Add expense data to the worksheet
+        expenses.forEach((expense) => {
             worksheet.addRow({
-                source: income.source,
-                amount: income.amount,
-                date: income.date,
-                notes: income.notes,
-                createdAt: income.createdAt
+                source: expense.source,
+                amount: expense.amount,
+                category: expense.category,
+                date: expense.date,
+                notes: expense.notes,
+                createdAt: expense.createdAt
             });
         });
 
@@ -219,4 +217,4 @@ export const downloadIncomeExcelFormat = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
-};
+}
