@@ -1,20 +1,13 @@
-import jwt from 'jsonwebtoken';
-import { comparePassword, hashPassword } from '../config/password.js';
-import { createUser, findUserByEmail, findUserById } from '../models/User.js';
-import { successResponse }  from '../utils/response.js';
-import AppError from '../utils/AppError.js';
-import isEmail from 'validator/lib/isEmail.js';
-
-// Generate JWT token
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-};
+import * as authService from "../services/authService.js";
+import { successResponse } from "../utils/response.js";
+import AppError from "../utils/AppError.js";
+import isEmail from "validator/lib/isEmail.js";
 
 // Register User
 export const registerUser = async (req, res, next) => {
     try {
         const { fullName, email, password, profilePicUrl } = req.body;
-        
+
         const errors = [];
 
         if (!fullName || !fullName.trim()) errors.push("Full name is required");
@@ -24,7 +17,7 @@ export const registerUser = async (req, res, next) => {
         } else {
             email = email.toLowerCase().trim();
             if (!isEmail(email)) {
-                errors.push("Invalid email format")
+                errors.push("Invalid email format");
             }
         }
 
@@ -35,28 +28,20 @@ export const registerUser = async (req, res, next) => {
         }
 
         if (errors.length > 0) {
-            throw new AppError(
-                "Missing required  fields",
-                400,
-                errors
-            )
+            throw new AppError("Missing required fields", 400, errors);
         }
 
-        // Hash the password before storing it in the database
-        const hashedPassword = await hashPassword(password);
-
-        // Create the user record in the database
-        const user = await createUser({
+        const { user, token } = await authService.register({
             fullName: fullName.trim(),
             email,
-            password: hashedPassword,
+            password,
             profilePicUrl
         });
-    
+
         const responseData = successResponse({
             message: "User registered successfully",
             data: user,
-            token: generateToken(user.userId),
+            token,
             statusCode: 201
         });
 
@@ -64,7 +49,7 @@ export const registerUser = async (req, res, next) => {
     } catch (error) {
         if (error.code === "23505") {
             error = new AppError(
-                "validation error",
+                "Validation error",
                 409,
                 ["Email already exists"]
             );
@@ -83,36 +68,15 @@ export const loginUser = async (req, res, next) => {
         if (!password) errors.push("Password is required");
 
         if (errors.length > 0) {
-            throw new AppError(
-                "Missing required  fields",
-                400,
-                errors
-            )
-        }
-       
-        // Find the user by email from the database
-        const user = await findUserByEmail(email);
-
-        if (!user) {
-            throw new AppError("User not found", 404, ["User does not exist"]);
+            throw new AppError("Missing required fields", 400, errors);
         }
 
-        // Compare the provided password with the hashed password stored in the database using bcrypt, if the password is does not match, return an error response
-        const isPasswordValid = await comparePassword(password, user.password);
-        if (!isPasswordValid) {
-            throw new AppError(
-                "Invalid credentials",
-                400,
-                ["Invalid email or password"]
-            )
-        }
-
-        delete user.password;
+        const { user, token } = await authService.login({ email, password });
 
         const responseData = successResponse({
             message: "User login successfully",
             data: user,
-            token: generateToken(user.userId),
+            token,
             statusCode: 200
         });
 
@@ -122,27 +86,20 @@ export const loginUser = async (req, res, next) => {
     }
 };
 
-// Get LoggedIn User Informations
+// Get LoggedIn User Information
 export const getLoggedInUser = async (req, res, next) => {
     try {
         const userId = req.user?.id;
-        
+
         if (!userId) {
             throw new AppError(
-                'User ID must be present',
+                "User ID must be present",
                 500,
-                ['User ID is missing in the request']
-            )
-        };
-
-        // Find the user by ID from the database
-        const user = await findUserById(userId);
-
-        if (!user) {
-            return next(
-                new AppError("User not found", 404, ["User does not exist"])
+                ["User ID is missing in the request"]
             );
         }
+
+        const user = await authService.getLoggedInUser(userId);
 
         const responseData = successResponse({
             message: "User fetched successfully",

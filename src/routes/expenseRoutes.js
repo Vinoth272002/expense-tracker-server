@@ -3,7 +3,8 @@ import { addExpense,
     deleteExpense,
     getAllExpenses,
     getExpenseById,
-    downloadExpenseExcelFormat
+    downloadExpenseExcelFormat,
+    updateExpense
 } from '../controllers/expenseController.js';
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -12,6 +13,7 @@ const router = express.Router();
 router.post("/", protect, addExpense);
 router.get("/", protect, getAllExpenses);
 router.get("/:expenseId", protect, getExpenseById);
+router.patch("/:expenseId", protect, updateExpense)
 router.get("/export/excel", protect, downloadExpenseExcelFormat);
 router.delete("/:expenseId", protect, deleteExpense);
 

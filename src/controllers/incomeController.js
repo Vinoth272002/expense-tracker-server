@@ -1,10 +1,4 @@
-import {
-    createIncome,
-    deleteIncomeById,
-    getAllIncomes,
-    getAllIncomesForExport,
-    findIncomeById
-} from "../models/Income.js";
+import * as incomeService from "../services/incomeService.js";
 import AppError from "../utils/AppError.js";
 import { successResponse } from "../utils/response.js";
 import ExcelJS from "exceljs";
@@ -23,49 +17,39 @@ export const addIncome = async (req, res, next) => {
         } else if (isNaN(amount)) {
             errors.push("Amount must be a number");
         } else if (Number(amount) <= 0) {
-            errors.push("Amount must be greater than 0")
+            errors.push("Amount must be greater than 0");
         }
-        
-        // Check the date if provided, otherwise set it to the current date
-        if (date) {
-            const parseDate = new Date(date);
 
-            if (isNaN(parseDate.getTime())) {
-                errors.push("Invalid date format");
-            } else if (parseDate > new Date()) {
-                errors.push("Date cannot be in the future")
-            }
-        } else {
-            date = new Date();
+        // Check the date if provided, otherwise set it to the current date
+        let incomeDate = date ? new Date(date) : new Date();
+
+        if (isNaN(incomeDate.getTime())) {
+            errors.push("Invalid date format");
+        } else if (incomeDate > new Date()) {
+            errors.push("Date cannot be in the future");
         }
 
         if (errors.length) {
-            throw new AppError(
-                "Validation error",
-                400,
-                errors
-            )
+            throw new AppError("Validation error", 400, errors);
         }
 
-        // Create the income record in the database
-        const income = await createIncome({
+        const income = await incomeService.create({
             userId,
             icon,
             source: source.trim(),
             amount: Number(amount),
-            date,
-            notes: notes.trim()
+            date: incomeDate,
+            notes: notes?.trim() || null
         });
 
-        // Format the response data
         const responseData = successResponse({
             message: "Income added successfully",
             data: income,
-            statusCode:201
+            statusCode: 201
         });
 
         return res.status(201).json(responseData);
-    } catch(error) {
+    } catch (error) {
         next(error);
     }
 };
@@ -73,18 +57,12 @@ export const addIncome = async (req, res, next) => {
 export const getAllIncome = async (req, res, next) => {
     try {
         const userId = req.user?.id;
-        
-        if(!userId) {
-            throw new AppError(
-                'User ID must be present',
-                500
-            )
-        };
 
-        // Get all incomes for the user
-        const allIncomes = await getAllIncomes({
-            userId
-        });
+        if (!userId) {
+            throw new AppError("User ID must be present", 500);
+        }
+
+        const allIncomes = await incomeService.getAll(userId);
 
         const responseData = successResponse({
             message: "Incomes retrieved successfully",
@@ -101,28 +79,48 @@ export const getAllIncome = async (req, res, next) => {
 export const getIncomeById = async (req, res, next) => {
     try {
         const userId = req.user?.id;
-        const { incomeId } =  req.params;
-        
+        const { incomeId } = req.params;
+
         if (!incomeId || Number.isNaN(Number(incomeId))) {
             throw new AppError(
                 "IncomeId must be a valid Number",
                 400,
                 ["IncomeId is required and must be a valid number"]
-            )
+            );
         }
 
-        const income = await findIncomeById({ incomeId, userId});
-
-        if (!income) {
-            throw new AppError(
-                "Income not found",
-                404,
-                ["Income not found"]
-            )
-        }
+        const income = await incomeService.getById(incomeId, userId);
 
         const responseData = successResponse({
             message: "Income retrieved successfully",
+            data: income,
+            statusCode: 200
+        });
+
+        res.status(200).json(responseData);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updateIncome = async (req, res, next) => {
+    try {
+        const userId = req.user?.id;
+        const { incomeId } = req.params;
+        const reqData = req.body;
+
+        if (!incomeId || Number.isNaN(Number(incomeId))) {
+            throw new AppError(
+                "IncomeId must be a valid number",
+                400,
+                ["IncomeId is required and must be a valid number"]
+            );
+        }
+
+        const income = await incomeService.update(incomeId, userId, reqData);
+
+        const responseData = successResponse({
+            message: "Income updated successfully",
             data: income,
             statusCode: 200
         });
@@ -143,15 +141,14 @@ export const deleteIncome = async (req, res, next) => {
                 "IncomeId must be a valid number",
                 400,
                 ["IncomeId is required and must be a valid number"]
-            )
+            );
         }
 
-        // Delete the income record from the Database
-        const responseDta = await deleteIncomeById({ incomeId, userId });
+        const result = await incomeService.remove(incomeId, userId);
 
         const responseData = successResponse({
             message: "Income deleted successfully",
-            data: responseDta,
+            data: result,
             statusCode: 200
         });
 
@@ -166,16 +163,12 @@ export const downloadIncomeExcelFormat = async (req, res, next) => {
         const userId = req.user?.id;
 
         if (!userId) {
-            throw new AppError(
-                "User ID must be present",
-                500
-            )
+            throw new AppError("User ID must be present", 500);
         }
 
-        // Get all incomes for the user to export
-        const incomes = await getAllIncomesForExport({ userId });
+        const incomes = await incomeService.exportAll(userId);
 
-        // Create a new workbook and worksheet 
+        // Create a new workbook and worksheet
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Incomes");
 
@@ -186,7 +179,7 @@ export const downloadIncomeExcelFormat = async (req, res, next) => {
             { header: "Date", key: "date", width: 20 },
             { header: "Notes", key: "notes", width: 30 },
             { header: "Created At", key: "createdAt", width: 30 }
-        ]
+        ];
 
         // Style the header row
         worksheet.getRow(1).font = { bold: true };
