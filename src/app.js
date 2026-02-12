@@ -6,7 +6,8 @@ import errorHandler from './middleware/errorHandler.js';
 import authRoutes from './routes/authRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import incomeRoutes from './routes/incomeRoutes.js';
-
+import expenseRoutes from './routes/expenseRoutes.js';
+import categoryRoutes from './routes/categoriesRoutes.js';
 
 dotenv.config();
 
@@ -26,6 +27,8 @@ app.use(express.json());
 app.use("/api/v1/auth", authRoutes);
 app.use("/api", uploadRoutes);
 app.use('/api/incomes', incomeRoutes);
+app.use("/api/expenses", expenseRoutes);
+app.use("/api/categories", categoryRoutes);
 
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
