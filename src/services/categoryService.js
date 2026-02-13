@@ -25,6 +25,12 @@ export const getById = async (userId, categoryId) => {
     return categoryMapper.mapOne(rawCategory);
 };
 
+export const getAll = async (userId) => {
+    const rawCategory = await categoryRepository.getAllCategories({ userId });
+
+    return categoryMapper.mapMany(rawCategory);
+};
+
 export const update = async (categoryId, userId, data) => {
     const { query, values } = buildUpdateQuery({
         table: "categories",
@@ -44,3 +50,9 @@ export const update = async (categoryId, userId, data) => {
 
     return categoryMapper.mapOne(rawCategory);
 };
+
+export const remove = async (categoryId, userId) => {
+    const rawCategory = await categoryRepository.deleteCategoryById({ categoryId, userId });
+
+    return categoryMapper.mapOne(rawCategory);
+}

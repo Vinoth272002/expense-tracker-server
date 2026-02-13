@@ -22,7 +22,7 @@ export const findCategoryById = async ({ userId, categoryId }) => {
     return result.rows[0];
 };
 
-export const getAllCategories = async ({ userId }) => {
+export const getAllCategories = async ({ userId }) => {    
     const query = `SELECT * FROM categories
         WHERE user_id = $1
     `;
@@ -37,3 +37,21 @@ export const updateCategoryById = async ({ query, values }) => {
 
     return result.rows[0];
 };
+
+export const deleteCategoryById = async ({ categoryId, userId }) => {
+    const query = `DELETE FROM categories
+        WHERE category_id = $1 AND user_id = $2
+        RETURNING category_id
+    `;
+
+    const result = await pool.query(query, [categoryId, userId]);
+
+    if (result.rowCount === 0) {
+        throw new AppError(
+            "Category not found",
+            404,
+            ["Category not found"]
+        );
+    }
+    return result.rows[0];
+}
