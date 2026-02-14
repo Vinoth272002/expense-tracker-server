@@ -31,17 +31,24 @@ export const registerUser = async (req, res, next) => {
             throw new AppError("Missing required fields", 400, errors);
         }
 
-        const { user, token } = await authService.register({
+        const { user, accessToken, refreshToken } = await authService.register({
             fullName: fullName.trim(),
             email,
             password,
             profilePicUrl
         });
 
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
         const responseData = successResponse({
             message: "User registered successfully",
             data: user,
-            token,
+            accessToken,
             statusCode: 201
         });
 
@@ -71,12 +78,19 @@ export const loginUser = async (req, res, next) => {
             throw new AppError("Missing required fields", 400, errors);
         }
 
-        const { user, token } = await authService.login({ email, password });
+        const { user, accessToken, refreshToken } = await authService.login({ email, password });
+
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
 
         const responseData = successResponse({
             message: "User login successfully",
             data: user,
-            token,
+            accessToken,
             statusCode: 200
         });
 
@@ -112,3 +126,44 @@ export const getLoggedInUser = async (req, res, next) => {
         next(error);
     }
 };
+
+export const logoutUser = async (req, res, next) => {
+    try {
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict'
+        });
+
+        const responseData = successResponse({
+            message: "User logged out successfully",
+            statusCode: 200
+        });
+
+        res.status(200).json(responseData);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const refreshToken = async (req, res, next) => {
+    try {
+        const refreshToken = req.cookies.refreshToken;
+
+        if (!refreshToken) {
+            throw new AppError("Refresh token missing", 401, ["Please login again"]);
+        }
+
+        const { accessToken, newRefreshToken } = await authService.refreshAccessToken(refreshToken);
+
+        const responseData = successResponse({
+            message: "Token refreshed successfully",
+            accessToken,
+            statusCode: 200
+        });
+
+        res.status(200).json(responseData);
+    } catch (error) {
+        next(error);
+    }
+}

@@ -4,8 +4,10 @@ import * as userRepository from "../repositories/userRepository.js";
 import * as userMapper from "../mappers/userMapper.js";
 import AppError from "../utils/AppError.js";
 
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+const generateTokens = (id) => {
+    const accessToken = jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const refreshToken = jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    return { accessToken, refreshToken }
 };
 
 export const register = async ({ fullName, email, password, profilePicUrl }) => {
@@ -19,9 +21,9 @@ export const register = async ({ fullName, email, password, profilePicUrl }) => 
     });
 
     const user = userMapper.mapOne(rawUser);
-    const token = generateToken(user.userId);
+    const { accessToken, refreshToken } = generateTokens(user.userId);
 
-    return { user, token };
+    return { user, accessToken, refreshToken };
 };
 
 export const login = async ({ email, password }) => {
@@ -44,9 +46,9 @@ export const login = async ({ email, password }) => {
     const user = userMapper.mapOne(rawUser);
     delete user.password;
 
-    const token = generateToken(user.userId);
+    const { accessToken, refreshToken } = generateTokens(user.userId);
 
-    return { user, token };
+    return { user, accessToken, refreshToken };
 };
 
 export const getLoggedInUser = async (userId) => {
@@ -57,4 +59,21 @@ export const getLoggedInUser = async (userId) => {
     }
 
     return userMapper.mapOne(rawUser);
+};
+
+
+export const refreshAccessToken = async (refreshToken) => {
+    try {
+        const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+        const user = await userRepository.findUserById(decoded.id);
+
+        if (!user) {
+            throw new AppError("User not found", 404, ["User does not exist"]);
+        }
+
+        const tokens = generateTokens(user.id);
+        return { accessToken: tokens.accessToken, newRefreshToken: tokens.refreshToken };
+    } catch (error) {
+        throw new AppError("Invalid refresh token", 401, ["Invalid or expired refresh token"]);
+    }
 };

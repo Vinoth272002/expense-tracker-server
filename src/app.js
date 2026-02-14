@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import cookieParser from 'cookie-parser';
 import errorHandler from './middleware/errorHandler.js';
 import authRoutes from './routes/authRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
@@ -18,11 +19,13 @@ app.use(
     cors({
         origin: process.env.CLIENT_URL || "*",
         methods: ['GET', 'POST', 'PUT', 'DELETE'],
-        allowedHeaders: ["Content-Type", "Authorization"]
+        allowedHeaders: ["Content-Type", "Authorization"],
+        credentials: true
     })
 );
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api", uploadRoutes);
