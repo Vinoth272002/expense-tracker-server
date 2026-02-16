@@ -1,19 +1,16 @@
-import jwt from 'jsonwebtoken';
-import { comparePassword, hashPassword } from '../config/password.js';
-import { createUser, findUserByEmail, findUserById } from '../models/User.js';
-import { successResponse }  from '../utils/response.js';
-import AppError from '../utils/AppError.js';
-import isEmail from 'validator/lib/isEmail.js';
-
-// Generate JWT token
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-};
+import * as authService from "../services/authService.js";
+import { successResponse } from "../utils/response.js";
+import AppError from "../utils/AppError.js";
+import isEmail from "validator/lib/isEmail.js";
 
 // Register User
 export const registerUser = async (req, res, next) => {
     try {
-        const { fullName, email, password, profilePicUrl } = req.body;
+        let { fullName, email, password, profilePicUrl } = req.body;
+
+        if (req.file) {
+            profilePicUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+        }
         
         const errors = [];
 
@@ -24,7 +21,7 @@ export const registerUser = async (req, res, next) => {
         } else {
             email = email.toLowerCase().trim();
             if (!isEmail(email)) {
-                errors.push("Invalid email format")
+                errors.push("Invalid email format");
             }
         }
 
@@ -35,36 +32,40 @@ export const registerUser = async (req, res, next) => {
         }
 
         if (errors.length > 0) {
-            throw new AppError(
-                "Missing required  fields",
-                400,
-                errors
-            )
+            throw new AppError("Missing required fields", 400, errors);
         }
 
-        const hashedPassword = await hashPassword(password);
-        const user = await createUser({
+        const { user, accessToken, refreshToken } = await authService.register({
             fullName: fullName.trim(),
             email,
-            password: hashedPassword,
-            profilePicUrl
+            password,
+            profilePicUrl: profilePicUrl || null
         });
-    
+
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
         const responseData = successResponse({
             message: "User registered successfully",
             data: user,
-            token: generateToken(user.id),
+            accessToken,
             statusCode: 201
         });
 
         return res.status(201).json(responseData);
     } catch (error) {
         if (error.code === "23505") {
-            error = new AppError(
-                "validation error",
-                409,
-                ["Email already exists"]
-            );
+            return next(
+                AppError(
+                    "Validation error",
+                    409,
+                    ["Email already exists"]
+                )
+            )
         }
 
         next(error);
@@ -80,57 +81,112 @@ export const loginUser = async (req, res, next) => {
         if (!password) errors.push("Password is required");
 
         if (errors.length > 0) {
-            throw new AppError(
-                "Missing required  fields",
-                400,
-                errors
-            )
+            throw new AppError("Missing required fields", 400, errors);
         }
 
-        const user = await findUserByEmail(email);
+        const { user, accessToken, refreshToken } = await authService.login({ email, password });
 
-        if (!comparePassword(password, user.password)) {
-            throw new AppError(
-                "Invalid credentials",
-                400,
-                ["Invalid email or password"]
-            )
-        }
-        
-
-        if (!user) {
-            return next(
-                new AppError("User not found", 404, ["User does not exist"])
-            );
-        }
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
 
         const responseData = successResponse({
             message: "User login successfully",
             data: user,
-            token: generateToken(user.id),
-            statusCode: 201
+            accessToken,
+            statusCode: 200
         });
 
-        return res.status(201).json(responseData);
+        return res.status(200).json(responseData);
     } catch (error) {
         next(error);
     }
 };
 
-// Get User Informations
-export const getUserInfo = async (req, res, next) => {
+// Get LoggedIn User Information
+export const getLoggedInUser = async (req, res, next) => {
     try {
-        const userId = req.user.id;
-        const user = await findUserById(userId);
+        const userId = req.user?.id;
 
-        if (!user) {
-            return next(
-                new AppError("User not found", 404, ["User does not exist"])
+        if (!userId) {
+            throw new AppError(
+                "User ID must be present",
+                500,
+                ["User ID is missing in the request"]
             );
         }
 
+        const user = await authService.getLoggedInUser(userId);
+
         const responseData = successResponse({
             message: "User fetched successfully",
+            data: user,
+            statusCode: 200
+        });
+
+        res.status(200).json(responseData);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const logoutUser = async (req, res, next) => {
+    try {
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict'
+        });
+
+        const responseData = successResponse({
+            message: "User logged out successfully",
+            statusCode: 200
+        });
+
+        res.status(200).json(responseData);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const refreshToken = async (req, res, next) => {
+    try {
+        const refreshToken = req.cookies.refreshToken;
+
+        if (!refreshToken) {
+            throw new AppError("Refresh token missing", 401, ["Please login again"]);
+        }
+
+        const { accessToken, newRefreshToken } = await authService.refreshAccessToken(refreshToken);
+
+        const responseData = successResponse({
+            message: "Token refreshed successfully",
+            accessToken,
+            statusCode: 200
+        });
+
+        res.status(200).json(responseData);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updateUserProfile = async (req, res, next) => {
+    try {
+        const userId = req.user?.id;
+        const { fullName, profilePicUrl } = req.body;
+
+        if (!userId) {
+            throw new AppError("User ID must be present", 500, ["User ID is missing in the request"]);
+        }
+
+        const user = await authService.updateUserProfile(userId, { fullName, profilePicUrl });
+
+        const responseData = successResponse({
+            message: "Profile updated successfully",
             data: user,
             statusCode: 200
         });

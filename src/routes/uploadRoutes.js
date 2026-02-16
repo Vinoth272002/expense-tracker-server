@@ -1,6 +1,7 @@
 import express from "express";
 import upload from "../middleware/uploadMiddleware.js";
 import AppError from "../utils/AppError.js";
+import { successResponse } from "../utils/response.js";
 
 const router = express.Router();
 

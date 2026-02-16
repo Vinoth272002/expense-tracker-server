@@ -1,12 +1,14 @@
 import express from 'express';
-import { addIncome, getAllIncome, deleteIncome, downloadIncomeExcelFormat } from '../controllers/incomeController.js';
+import * as incomeController from '../controllers/incomeController.js';
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/add-income", protect, addIncome);
-router.get("/get-all-incomes", protect, getAllIncome);
-router.get("/download-income-exacel", protect, downloadIncomeExcelFormat);
-router.delete("/delete-income/:id", protect, deleteIncome);
+router.post("/", protect, incomeController.addIncome);
+router.get("/", protect, incomeController.getAllIncome);
+router.get("/:incomeId", protect, incomeController.getIncomeById);
+router.patch("/:incomeId", protect, incomeController.updateIncome)
+router.get("/export/excel", protect, incomeController.downloadIncomeExcelFormat);
+router.delete("/:incomeId", protect, incomeController.deleteIncome);
 
 export default router;
