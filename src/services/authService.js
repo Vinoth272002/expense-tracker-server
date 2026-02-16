@@ -22,7 +22,7 @@ export const register = async ({ fullName, email, password, profilePicUrl }) => 
 
     const user = userMapper.mapOne(rawUser);
     const { accessToken, refreshToken } = generateTokens(user.userId);
-
+    delete user.password;
     return { user, accessToken, refreshToken };
 };
 
@@ -76,4 +76,14 @@ export const refreshAccessToken = async (refreshToken) => {
     } catch (error) {
         throw new AppError("Invalid refresh token", 401, ["Invalid or expired refresh token"]);
     }
+};
+
+export const updateUserProfile = async (userId, { fullName, profilePicUrl }) => {
+    const rawUser = await userRepository.updateUser(userId, { fullName, profilePicUrl });
+
+    if (!rawUser) {
+        throw new AppError("User not found", 404, ["User does not exist"]);
+    }
+
+    return userMapper.mapOne(rawUser);
 };

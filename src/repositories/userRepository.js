@@ -28,3 +28,16 @@ export const findUserById = async (id) => {
 
     return result.rows[0];
 };
+
+export const updateUser = async (userId, { fullName, profilePicUrl }) => {
+    const query = `UPDATE users
+        SET full_name = COALESCE($1, full_name),
+            profile_pic_url = COALESCE($2, profile_pic_url)
+        WHERE id = $3
+        RETURNING id, full_name, email, profile_pic_url, created_at
+    `;
+
+    const result = await pool.query(query, [fullName, profilePicUrl, userId]);
+
+    return result.rows[0];
+};

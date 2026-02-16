@@ -6,8 +6,12 @@ import isEmail from "validator/lib/isEmail.js";
 // Register User
 export const registerUser = async (req, res, next) => {
     try {
-        const { fullName, email, password, profilePicUrl } = req.body;
+        let { fullName, email, password, profilePicUrl } = req.body;
 
+        if (req.file) {
+            profilePicUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+        }
+        
         const errors = [];
 
         if (!fullName || !fullName.trim()) errors.push("Full name is required");
@@ -35,7 +39,7 @@ export const registerUser = async (req, res, next) => {
             fullName: fullName.trim(),
             email,
             password,
-            profilePicUrl
+            profilePicUrl: profilePicUrl || null
         });
 
         res.cookie('refreshToken', refreshToken, {
@@ -55,11 +59,13 @@ export const registerUser = async (req, res, next) => {
         return res.status(201).json(responseData);
     } catch (error) {
         if (error.code === "23505") {
-            error = new AppError(
-                "Validation error",
-                409,
-                ["Email already exists"]
-            );
+            return next(
+                AppError(
+                    "Validation error",
+                    409,
+                    ["Email already exists"]
+                )
+            )
         }
 
         next(error);
@@ -166,4 +172,27 @@ export const refreshToken = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
-}
+};
+
+export const updateUserProfile = async (req, res, next) => {
+    try {
+        const userId = req.user?.id;
+        const { fullName, profilePicUrl } = req.body;
+
+        if (!userId) {
+            throw new AppError("User ID must be present", 500, ["User ID is missing in the request"]);
+        }
+
+        const user = await authService.updateUserProfile(userId, { fullName, profilePicUrl });
+
+        const responseData = successResponse({
+            message: "Profile updated successfully",
+            data: user,
+            statusCode: 200
+        });
+
+        res.status(200).json(responseData);
+    } catch (error) {
+        next(error);
+    }
+};

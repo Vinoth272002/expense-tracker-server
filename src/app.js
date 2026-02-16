@@ -27,11 +27,11 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-app.use("/api/v1/auth", authRoutes);
-app.use("/api", uploadRoutes);
-app.use('/api/incomes', incomeRoutes);
-app.use("/api/expenses", expenseRoutes);
-app.use("/api/categories", categoryRoutes);
+app.use("/auth", authRoutes);
+app.use("/", uploadRoutes);
+app.use('/incomes', incomeRoutes);
+app.use("/expenses", expenseRoutes);
+app.use("/categories", categoryRoutes);
 
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
