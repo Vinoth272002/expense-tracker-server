@@ -9,6 +9,7 @@ import uploadRoutes from './routes/uploadRoutes.js';
 import incomeRoutes from './routes/incomeRoutes.js';
 import expenseRoutes from './routes/expenseRoutes.js';
 import categoryRoutes from './routes/categoriesRoutes.js';
+import AppError from './utils/AppError.js';
 
 dotenv.config();
 
@@ -34,6 +35,10 @@ app.use("/expenses", expenseRoutes);
 app.use("/categories", categoryRoutes);
 
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
+app.use((req, res, next) => {
+    next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+});
 
 app.use(errorHandler);
 

@@ -3,7 +3,7 @@ import AppError from "../utils/AppError.js";
 import fs from "fs";
 import path from 'path';
 
-const uploadDir = path.join(process.cwd(), 'uploads');
+const uploadDir = path.join(process.cwd(), 'src', 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
